@@ -1,9 +1,6 @@
 LONG_DESCRIPTION = """
-
-This package provides a Python tool for building visualizations and predicting the revenue of
-a movie based on the data related to from TMDB and OMDB database. 
-
-
+This package provides a Python tool to crawl html content, extract keywords against the corpus, and provide trending analysis.
+It is developed solely for the use of Pitchbook Data, all rights reserved for the project's respective owners
 """
 
 try:
@@ -12,16 +9,39 @@ except ImportError:
     from distutils.core import setup
 
 
-DESCRIPTION         = "movie_badger: Analysis and visualization of the correlation between movie infomation and movie revenue."
-NAME                = "movie_badger"
+DESCRIPTION         = "trending_news_keyword: financial and tech trending and emerging keywords from news articles"
+NAME                = "trending_news_keyword"
 PACKAGES            = find_packages()
 #PACKAGE_DATA        = {'movie_badger': ['examples/*.ipynb']}
-AUTHOR              = "Anna Huang | Chen Ren | Jingyun Chen | Junmeng Zhu | Weichen Xu"
-AUTHOR_EMAIL        = "..../chenren7@uw.edu/@uw.edu"
-URL                 = 'https://github.com/UWSEDS-aut17/uwseds-group-movie-badgers'
-DOWNLOAD_URL        = 'https://github.com/UWSEDS-aut17/uwseds-group-movie-badgers'
+AUTHOR              = "Anna Huang | Laurie Lai | Sheryl Wang | Su Wang"
+AUTHOR_EMAIL        = "..../rhuang92@uw.edu/@uw.edu"
+URL                 = 'https://github.com/andurilhuang/trending_news_keyword'
+DOWNLOAD_URL        = 'https://github.com/andurilhuang/trending_news_keywords'
 LICENSE             = 'MIT'
-INSTALL_REQUIRES    = ['requests','pandas','numpy','json','datetime','sklearn']
+INSTALL_REQUIRES    = ['requests',
+                       'pandas',
+                       'numpy',
+                       'json',
+                       'datetime',
+                       'newspaper',
+                       'boto3',
+                       'langdetect',
+                       'nltk',
+                       'threading',
+                       'bs4',
+                       'decimal',
+                       'urllib',
+                       're',
+                       'forex_python',
+                       'MySQLdb',
+                       'itertools',
+                       'string',
+                       'collections',
+                       'fuzzywuzzy',
+                       'pycountry',
+                       'calendar',
+                       'math',
+                       'csv']
 VERSION             = '1.0.0'
 KEYWORD             = 'movie revenue prediction'
 
