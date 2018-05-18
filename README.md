@@ -16,6 +16,7 @@ Within a news article, keywords can help to identify the related entities and pu
 
 ## Package Detials & Functions Highlight
 *Crawling & DB Tool*
+
 To crawl individual url info, see script "get_url" within package
 
 To crawl through and write into Dynamo large volumn of urls (>10k) see Jupyter Notebook "Get_Data_Write_Dynamo"
@@ -24,22 +25,40 @@ Refer to the notebook above for Dynamo writing procedures
 
 
 *Get Trending Keywords*
+
 keyword_extraction:
+
 The whole pipeline in my part: from raw text to one-row-per-keyword format, filtering out irrelevant keywords. The resulted dataframe will be used for trending keyword extraction.Trending keyword extraction should use the keywords in the 'keyword_clean_tc' column (in title case) so all keywords are in consitent form
 
-get_category: Given the url of an article generate the first word in the path, which is likely to be the categoryto which the article belongs to
+get_category: 
 
-data_preprocessing: This function is used to preprocess and clean the input articles to remove irrelevant contents, thus ensure the text data used to extract keyword are more business/finance/technology related
+Given the url of an article generate the first word in the path, which is likely to be the categoryto which the article belongs to
 
-clean_text: This function is used to further clean the input articles to remove irrelevant words/suffixes
+data_preprocessing: 
 
-get_nounphrase:Extract noun phrases from the article using regular expression and nlp techniques
+This function is used to preprocess and clean the input articles to remove irrelevant contents, thus ensure the text data used to extract keyword are more business/finance/technology related
 
-get_keyword_candidates: Get keyword candidates from list of noun phrase by term frequency and if the phrase is in keyword
+clean_text: 
 
-keyword_cutoff: Get different number of keywords based on the article length
+This function is used to further clean the input articles to remove irrelevant words/suffixes
 
-get_verbphrase: Get verb phrases that contain the trending keyword from the raw text
+get_nounphrase:
 
-get_industry_investor: Get the industry and investors related to the trending keyword
+Extract noun phrases from the article using regular expression and nlp techniques
+
+get_keyword_candidates: 
+
+Get keyword candidates from list of noun phrase by term frequency and if the phrase is in keyword
+
+keyword_cutoff: 
+
+Get different number of keywords based on the article length
+
+get_verbphrase: 
+
+Get verb phrases that contain the trending keyword from the raw text
+
+get_industry_investor: 
+
+Get the industry and investors related to the trending keyword
 
