@@ -3,6 +3,9 @@
 import datetime
 import time
 import csv
+import pickle
+import pandas as pd
+import numpy as np
 from itertools import islice
 from math import sqrt
 import math
@@ -30,18 +33,20 @@ def zscore(obs, pop):
     else:
         return (obs - avg) / std
 
-def cleanData(csvFile):
+def cleanData(df):
     '''
     This function reads in a csv file and convert it into a list, and delete the title row and rows with 
     no date information.
     input: a csv file, the 4th column is the date information and the 12th column is the keyword data.
     output: a list object
-    '''
-    csv_reader = csv.reader(open(csvFile, encoding='utf8'))
+    '''     
+    #csv_reader = csv.reader(open(csvFile, encoding='utf8'))
+    data = pd.read_pickle(df)
     #convert to list, each row in the csv is an item.
-    rows = list(csv_reader)
+    #rows = list(csv_reader)
+    rows = data.values.tolist()
     #delete the title row
-    del rows[0]
+    #del rows[0]
     #Delete rows with no date information
     for i in range(len(rows)-1,-1,-1):
         date = rows[i][3]
@@ -82,9 +87,9 @@ def convertDateFormat(rows):
         dateTimeFormat = datetime.datetime.strptime(newDateWithZero,'%Y/%m/%d')#2016-09-03 00:00:00
         rows[i][3] = dateTimeFormat
         #delete the text column to make the output more clear.
-        del rows[i][2]
+        #del rows[i][2]
     #sort all info in csv in time reverse order
-    rows.sort(key=lambda item: (item[2]), reverse=True)
+    rows.sort(key=lambda item: (item[3]), reverse=True)
     return rows
 
 def getEachKwHistoricalCountsDaily(rows, duration):
@@ -103,19 +108,23 @@ def getEachKwHistoricalCountsDaily(rows, duration):
         for content in row[11].strip("[]'").split("', '"):
             keywords.append(content)
         for keyword in keywords:
-            keywordDate = row[2]
+            keywordDate = row[3]
             # If this keyword is published in article within the periods we want to see
             if (keywordDate >= currentDate - durationInFormat) and (keywordDate <= currentDate -datetime.timedelta(days = 1)):
                 countLocationInList = (currentDate - keywordDate - datetime.timedelta(days = 1)).days
                 if keyword in dict:
-                    dict[keyword][countLocationInList] = dict[keyword][countLocationInList] + 1
+                    allInfo = dict[keyword]
+                    allInfo['articleCoverage'][countLocationInList] += 1
+                    helper(allInfo,row)
                 else:
                     # initialize a list with each item equals to 0.
                     list = []
                     for i in range(duration):
                         list.append(0)
-                    dict[keyword] = list
-                    dict[keyword][countLocationInList] = dict[keyword][countLocationInList] + 1
+                    list[countLocationInList] += 1
+                    allInfo = {'articleCoverage':list,'text_clean': [],'text_raw':[],'timestamp':[],'title':[],'url':[],'entity': [],'entityID':[]}
+                    helper(allInfo,row)
+                    dict[keyword] = allInfo
     return dict
 
 def getEachKwHistoricalCountsWeekly(rows, duration):
@@ -133,28 +142,42 @@ def getEachKwHistoricalCountsWeekly(rows, duration):
             2 represents article coverage in 8.17~8.23, and 3 represents article coverage in 8.10~8.16
     '''
     durationInFormat = datetime.timedelta(days = duration)
-    numberOfWeeks = int(duration / 7) #2
+    numberOfWeeks = int(duration / 7) #4
     for row in rows:
         keywords = []
         for content in row[11].strip("[]'").split("', '"):
             keywords.append(content)
         for keyword in keywords:
-            keywordDate = row[2]
+            keywordDate = row[3]
             startDate = currentDate - datetime.timedelta(days = 7*numberOfWeeks)
             endDate = currentDate - datetime.timedelta(days = 1)
             if (keywordDate >= startDate) and (keywordDate <= endDate):
                 diff = (currentDate - keywordDate).days #14
                 locationInList = math.ceil(diff/7) - 1 #1
                 if keyword in dict:
-                    dict[keyword][locationInList] = dict[keyword][locationInList] + 1
+                    allInfo = dict[keyword]
+                    allInfo['articleCoverage'][locationInList] += 1
+                    helper(allInfo,row)
                 else:
                     list = []
                     for i in range(numberOfWeeks):
                         list.append(0)
-                    dict[keyword] = list
-                    dict[keyword][locationInList] = dict[keyword][locationInList] + 1
+                    list[locationInList] += 1
+                    #create a map to store all information for a trending keyword
+                    allInfo = {'articleCoverage':list,'text_clean': [],'text_raw':[],'timestamp':[],'title':[],'url':[],'entity': [],'entityID':[]}
+                    helper(allInfo,row)
+                    dict[keyword] = allInfo
     return dict
 
+def helper(dict,row):
+    dict['text_clean'].append(row[1])
+    dict['text_raw'].append(row[2])
+    dict['timestamp'].append(row[3])
+    dict['title'].append(row[4])
+    dict['url'].append(row[5])
+    dict['entity'].append(row[6])
+    dict['entityID'].append(row[7])
+    
 def saveKeywordInfoIntoDict(rows):
     '''calculate article coverage on weekly time interval if the duration >= 14 days
         otherwise calculate article coverage on daily time interval
@@ -169,7 +192,7 @@ def saveKeywordInfoIntoDict(rows):
     return dict
 
 
-def writeOutputCsvTitle(fileName,data):
+def writeOutputCsvTitle(dict):
     '''
     Write results to the output file
     input: fileName is the output csv file name, should be a string, end up in .csv
@@ -177,8 +200,8 @@ def writeOutputCsvTitle(fileName,data):
             data: a dictionary, keywords are contained as keys and list as values, the list contains
             the number of articles which mention this keyword in date descending order.
     '''
-    csvOutputFile = open(fileName, 'w', encoding='utf8',newline='')
-    writer = csv.writer(csvOutputFile)
+    # csvOutputFile = open(fileName, 'w', encoding='utf8',newline='')
+    # writer = csv.writer(csvOutputFile)
     # write title row into csv file
     titleList = ['Keyword']
     allInfoPrintToCsv = []
@@ -191,18 +214,21 @@ def writeOutputCsvTitle(fileName,data):
                 title = str(i) + ' days ago'
             titleList.append(title)
         titleList.append('Z-score')   
-        writer.writerow(titleList)
+        # writer.writerow(titleList)
         # write content to csv file
         for keyword in dict:
             oneLinePrintToCsv = []
             oneLinePrintToCsv.append(keyword)
             for i in range(0,duration):
-                oneLinePrintToCsv.append(dict[keyword][i])
-            oneLinePrintToCsv.append(zscore(dict[keyword][0], dict[keyword][1:duration]))
-            allInfoPrintToCsv.append(oneLinePrintToCsv)
+                oneLinePrintToCsv.append(dict[keyword]['articleCoverage'][i])
+            z = zscore(dict[keyword]['articleCoverage'][0], dict[keyword]['articleCoverage'][1:duration])
+            oneLinePrintToCsv.append(z)
+            dict[keyword]['z-score'] = z
+            allInfoPrintToCsv.append(oneLinePrintToCsv)    
         allInfoPrintToCsv.sort(key=lambda item: item[duration + 1], reverse=True) 
         for i in range(0, min(100, len(allInfoPrintToCsv))):
-            writer.writerow(allInfoPrintToCsv[i])
+            addInfoIntoResultHelper(result,dict,allInfoPrintToCsv[i][0])
+    #        writer.writerow(allInfoPrintToCsv[i])
     # if calculate counts in weekly frequency 
     else:
         numberOfWeeks = int(duration / 7)
@@ -212,18 +238,35 @@ def writeOutputCsvTitle(fileName,data):
             else: 
                 title = str(i) + ' weeks ago'
             titleList.append(title)
-        titleList.append('Z-score')   
-        writer.writerow(titleList)
+        for item in ['Z-score','text_clean','text_raw','timestamp','title','url','entity','entityID']:
+            titleList.append(item)   
+        #writer.writerow(titleList)
         for keyword in dict:
             oneLinePrintToCsv = []
             oneLinePrintToCsv.append(keyword)
             for i in range(0,numberOfWeeks):
-                oneLinePrintToCsv.append(dict[keyword][i])
-            oneLinePrintToCsv.append(zscore(dict[keyword][0], dict[keyword][1:numberOfWeeks]))
+                oneLinePrintToCsv.append(dict[keyword]['articleCoverage'][i])
+            z = zscore(dict[keyword]['articleCoverage'][0], dict[keyword]['articleCoverage'][1:numberOfWeeks])
+            oneLinePrintToCsv.append(z)
+            dict[keyword]['z-score'] = z
             allInfoPrintToCsv.append(oneLinePrintToCsv)  
         allInfoPrintToCsv.sort(key=lambda item: item[numberOfWeeks + 1], reverse=True)
         for i in range(0, min(100, len(allInfoPrintToCsv))):
-            writer.writerow(allInfoPrintToCsv[i])   
+            #writer.writerow(allInfoPrintToCsv[i])
+            addInfoIntoResultHelper(result,dict,allInfoPrintToCsv[i][0])
+    return result
+    
+def addInfoIntoResultHelper(result,dict,keyword):
+    result['Trending_keyword'].append(keyword)
+    result['articleCoverage'].append(dict[keyword]['articleCoverage'])
+    result['z-score'].append(dict[keyword]['z-score'])
+    result['text_clean'].append(dict[keyword]['text_clean'])
+    result['text_raw'].append(dict[keyword]['text_raw'])
+    result['timestamp'].append(dict[keyword]['timestamp'])
+    result['title'].append(dict[keyword]['title'])
+    result['url'].append(dict[keyword]['url'])
+    result['entity'].append(dict[keyword]['entity'])
+    result['entityID'].append(dict[keyword]['entityID'])
 
 def getArticleCoverageForKeyword(keyword, days, currentDate):#2018/04/23
     '''
@@ -283,9 +326,35 @@ def plotDateAndArticleCoverage(keyword, period, currentDate):
 
 
 dict = {}
-currentDate = datetime.datetime(2016, 9, 1, 0, 0, 0)
+result = {'Trending_keyword': [], 'articleCoverage':[],'z-score':[],
+          'text_clean': [],'text_raw':[],'timestamp':[],'title':[],
+          'url':[],'entity': [],'entityID':[]}
+currentDate = datetime.datetime(2017, 1, 6, 0, 0, 0)
 duration = 28
-data = cleanData('data_0424.csv')#list
+data = cleanData('keyword_data_final2.pkl')#list
 sortedData = convertDateFormat(data)#list
-resultDict = saveKeywordInfoIntoDict(sortedData)
-writeOutputCsvTitle('result.csv', resultDict)
+resultDict = saveKeywordInfoIntoDict(sortedData) #get dict
+writeOutputCsvTitle(resultDict)
+result_df = pd.DataFrame(result)
+result_df.to_pickle('finalResult.pkl') 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
